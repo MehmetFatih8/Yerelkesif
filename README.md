@@ -1,6 +1,6 @@
 # Yerelkeşif
 
-A Windows program that scans your local network, lists the devices it finds, and lets you chat and send files to them. It uses async asio for all networking, so no extra threads are spent polling sockets. The UI is a WebView2 window with a custom frameless title bar.
+A program that scans your local network, lists the devices it finds, and lets you chat and send files to them. It uses async asio for all networking, so no extra threads are spent polling sockets. The UI is a WebView2 window with a custom frameless title bar.
 
 ## Usage
 

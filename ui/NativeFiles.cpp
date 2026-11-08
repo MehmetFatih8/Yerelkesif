@@ -3,8 +3,11 @@
 #include <objbase.h>
 #include <commdlg.h>
 #include <shlwapi.h>
+#include <filesystem>
+#include <shobjidl.h>
+#include <algorithm>
 
-#include "../Text.h"
+#include "../common/Text.h"
 
 namespace {
 
@@ -19,6 +22,17 @@ std::string FileRecordJson(const std::wstring& path) {
     return "{\"name\":" + JsonQuote(Utf8FromWide(name)) +
            ",\"size\":" + std::to_string(size) +
            ",\"path\":" + JsonQuote(Utf8FromWide(path)) + "}";
+}
+
+std::string FolderFileRecordJson(const std::wstring& path, const std::wstring& remoteName) {
+    WIN32_FILE_ATTRIBUTE_DATA data{};
+    unsigned long long size = 0;
+    if (GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &data))
+        size = (static_cast<unsigned long long>(data.nFileSizeHigh) << 32) | data.nFileSizeLow;
+    return "{\"name\":" + JsonQuote(Utf8FromWide(remoteName)) +
+           ",\"size\":" + std::to_string(size) +
+           ",\"path\":" + JsonQuote(Utf8FromWide(path)) +
+           ",\"remoteName\":" + JsonQuote(Utf8FromWide(remoteName)) + "}";
 }
 
 }  // namespace
@@ -51,6 +65,51 @@ std::string PickFilesJson(HWND owner) {
         }
     }
     return FilesJson(paths);
+}
+
+std::string PickFolderPath(HWND owner) {
+    IFileOpenDialog* dialog = nullptr;
+    if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER,
+                                IID_PPV_ARGS(&dialog)))) return "null";
+    FILEOPENDIALOGOPTIONS options{};
+    dialog->GetOptions(&options);
+    dialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM | FOS_PATHMUSTEXIST);
+    dialog->SetTitle(L"Paylaşılacak klasörü seçin");
+    IShellItem* item = nullptr;
+    const HRESULT result = dialog->Show(owner);
+    std::string selected = "null";
+    if (SUCCEEDED(result) && SUCCEEDED(dialog->GetResult(&item))) {
+        PWSTR path = nullptr;
+        if (SUCCEEDED(item->GetDisplayName(SIGDN_FILESYSPATH, &path)) && path) {
+            selected = JsonQuote(Utf8FromWide(path));
+            CoTaskMemFree(path);
+        }
+        item->Release();
+    }
+    dialog->Release();
+    return selected;
+}
+
+std::string PickFolderFilesJson(HWND owner) {
+    const std::string selected = PickFolderPath(owner);
+    if (selected == "null") return "[]";
+    const auto args = ParseJsonStringArray("[" + selected + "]");
+    if (args.empty()) return "[]";
+    const auto root = PathFromUtf8(args.front());
+    std::vector<std::wstring> files;
+    std::error_code ec;
+    for (std::filesystem::recursive_directory_iterator it(root, ec), end; !ec && it != end; it.increment(ec)) {
+        if (it->is_regular_file(ec)) files.push_back(it->path().native());
+    }
+    std::sort(files.begin(), files.end());
+    std::string json = "[";
+    const auto rootName = root.filename();
+    for (std::size_t i = 0; i < files.size(); ++i) {
+        if (i) json += ",";
+        const auto relative = (rootName / std::filesystem::relative(std::filesystem::path(files[i]), root, ec)).generic_wstring();
+        json += FolderFileRecordJson(files[i], relative);
+    }
+    return json + "]";
 }
 
 std::string FilesJson(const std::vector<std::wstring>& paths) {

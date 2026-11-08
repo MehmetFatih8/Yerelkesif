@@ -1,6 +1,7 @@
 #pragma once
 
 #include <asio.hpp>
+#include <array>
 #include <deque>
 #include <filesystem>
 #include <functional>
@@ -9,6 +10,11 @@
 #include <vector>
 
 #include "NetEvents.h"
+
+struct FileToSend {
+    std::filesystem::path path;
+    std::string remoteName;
+};
 
 // Bir cihaza giden TCP bağlantısı: mesajlar ana soket, dosyalar dosya soketi üzerinden gider.
 // Tüm çağrılar io thread'inde yapılmalıdır (AppController bunu sağlar).
@@ -25,12 +31,12 @@ public:
     bool isConnected() const { return m_connected; }
 
     void sendMessage(const std::string& text);
-    void sendFiles(const std::vector<std::filesystem::path>& files);
+    void sendFiles(const std::vector<FileToSend>& files);
     void close();
 
 private:
     struct PendingFile {
-        std::filesystem::path path;
+        FileToSend file;
         std::size_t index;
         std::size_t total;
     };
@@ -39,6 +45,7 @@ private:
     ClientSocket(asio::io_context& io, NetEventsPtr events, std::string ip);
 
     void writeNextMessage();
+    void monitorMain();
     void startNextFile();
     void sendRequest(const std::shared_ptr<OutgoingFile>& file);
     void waitForAck(const std::shared_ptr<OutgoingFile>& file);
@@ -51,6 +58,7 @@ private:
     std::string m_ip;
     asio::ip::tcp::socket m_main;
     asio::ip::tcp::socket m_file;
+    std::array<char, 256> m_monitorBuffer{};
     bool m_connected{false};
     std::deque<std::shared_ptr<const std::string>> m_messages;   // Sıradaki ilk öğe yazılmakta olan paket
     std::deque<PendingFile> m_files;

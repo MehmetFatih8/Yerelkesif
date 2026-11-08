@@ -1,10 +1,12 @@
 #include <windows.h>
 #include <objbase.h>
+#include <shellapi.h>
+#include <shobjidl.h>
 
 #include <exception>
 
 #include "AppController.h"
-#include "Logger.h"
+#include "common/Logger.h"
 #include "ui/MainWindow.h"
 #include "ui/UiBridge.h"
 
@@ -16,6 +18,13 @@ int WINAPI WinMain(HINSTANCE instance, HINSTANCE, LPSTR, int) {
 
     // WebView2, dış pencereyle kullanılırken COM'un STA olarak başlatılmasını ister
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    SetCurrentProcessExplicitAppUserModelID(L"MehmetFatih8.Yerelkesif");
+
+    // Explorer can cache the EXE's file icon separately from the running window icon.
+    wchar_t executablePath[MAX_PATH]{};
+    const DWORD pathLength = GetModuleFileNameW(nullptr, executablePath, MAX_PATH);
+    if (pathLength > 0 && pathLength < MAX_PATH)
+        SHChangeNotify(SHCNE_UPDATEITEM, SHCNF_PATHW, executablePath, nullptr);
 
     try {
         AppController app;

@@ -70,11 +70,20 @@ inline constexpr const char* kArayuzHtml = R"HTML(
     font: 600 13px/1 var(--font-display); color: var(--text); opacity: .92;
   }
   .logo {
-    width: 14px; height: 14px; border-radius: 5px;
-    background: linear-gradient(135deg, var(--primary), var(--accent));
+    width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%; overflow: hidden;
+    display: grid; place-items: center;
+    background: linear-gradient(145deg, #27436d, #155c58);
+    border: 1px solid rgba(185, 225, 255, .36);
     box-shadow: 0 0 10px rgba(169, 201, 255, .35);
   }
+  .logo svg { width: 16px; height: 16px; transform: translate(.25px, .25px); }
   .wc { display: flex; height: 100%; }
+  .settings-toggle { width: 42px; height: 100%; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; }
+  .settings-toggle:hover { background: rgba(255,255,255,.08); color: var(--text); }
+  .settings-toggle svg { width: 17px; height: 17px; }
+  .download-toggle { height: 30px; margin: auto 10px auto 0; padding: 0 11px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--stroke); border-radius: 999px; background: rgba(255,255,255,.04); color: var(--muted); font: 600 12px/1 var(--font-text); cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+  .download-toggle:hover { background: var(--primary-soft); border-color: rgba(169,201,255,.3); color: var(--text); }
+  .download-toggle svg { width: 14px; height: 14px; }
   .wc-btn {
     width: 46px; height: 100%; padding: 0;
     display: flex; align-items: center; justify-content: center;
@@ -178,6 +187,9 @@ inline constexpr const char* kArayuzHtml = R"HTML(
     content: ""; width: 6px; height: 6px; border-radius: 50%;
     background: var(--success); box-shadow: 0 0 8px var(--success);
   }
+  .device.inactive .status { background: rgba(255, 155, 155, .12); color: var(--danger); }
+  .device.inactive .status::before { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+  .device.inactive { opacity: .72; }
 
   /* Boş durum */
   .empty {
@@ -196,14 +208,14 @@ inline constexpr const char* kArayuzHtml = R"HTML(
   /* Seçili cihaz paneli: üstte dosya gönderimi (sabit boy), altta sohbet (kalan alan) */
   .sel-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
   .gonder { flex: none; }
-  .work { height: 190px; flex: none; display: flex; gap: 14px; }
+  .work { height: 160px; flex: none; display: flex; gap: 12px; }
 
   /* Sürükle-bırak alanı */
   .drop {
-    width: 230px; flex-shrink: 0;
+    width: 150px; flex-shrink: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-    padding: 16px;
-    border: 1.5px dashed rgba(169, 201, 255, .30); border-radius: 24px;
+    padding: 12px;
+    border: 1.5px dashed rgba(169, 201, 255, .30); border-radius: 20px;
     background: rgba(255, 255, 255, .03);
     color: var(--muted); text-align: center; cursor: pointer;
     transition: border-color .2s ease, background .2s ease, transform .2s ease;
@@ -211,11 +223,12 @@ inline constexpr const char* kArayuzHtml = R"HTML(
   .drop:hover { border-color: rgba(169, 201, 255, .55); background: rgba(255, 255, 255, .05); }
   .drop:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
   .drop .plus {
-    width: 52px; height: 52px; margin-bottom: 8px;
-    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; margin-bottom: 4px;
+    display: grid; place-items: center;
     border-radius: 50%; background: var(--primary-soft);
-    color: var(--primary); font: 300 34px/1 var(--font-display);
+    color: var(--primary);
   }
+  .drop .plus svg { display: block; width: 18px; height: 18px; }
   .drop-title { font: 650 15px/1.3 var(--font-display); color: var(--text); }
   .drop-sub { font-size: 13px; }
   .drop.over {
@@ -231,15 +244,23 @@ inline constexpr const char* kArayuzHtml = R"HTML(
     border: 1px solid var(--stroke); border-radius: 24px;
     padding: 14px;
   }
+  .file-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+  .file-actions .btn { height: 32px; flex: 1; min-width: 0; padding: 0 10px; font-size: 12px; }
+  .file-list .empty { width: 100%; padding: 6px 8px; gap: 3px; }
+  .file-list .empty strong { font-size: 13px; }
+  .file-list .empty span { font-size: 11px; line-height: 1.3; }
   .file-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
   .file {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding: 10px 14px; border-radius: 16px;
+    padding: 6px 9px; border-radius: 12px;
     background: rgba(255, 255, 255, .05);
     animation: rise .25s ease;
   }
   .file .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
   .file .size { color: var(--muted); font-size: 13px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+  .file .remove { width: 28px; height: 28px; flex: 0 0 28px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+  .file .remove svg { display: block; width: 12px; height: 12px; }
+  .file .remove:hover { background: #c42b1c; color: #fff; }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
   /* Aktarım alt çubuğu: ilerleme + bilgi + ana eylem */
@@ -254,7 +275,7 @@ inline constexpr const char* kArayuzHtml = R"HTML(
     transition: width .2s ease;
   }
   .foot { display: flex; justify-content: flex-end; align-items: center; gap: 14px; padding-top: 12px; }
-  .foot .info { color: var(--muted); font-size: 13px; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .foot .info { color: var(--muted); font-size: 13px; margin-right: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* Sohbet paneli: gelen mesajlar solda, giden mesajlar sağda, sistem satırları ortada */
   .sohbet {
@@ -330,6 +351,9 @@ inline constexpr const char* kArayuzHtml = R"HTML(
     user-select: text;
     transition: border-color .2s ease;
   }
+  .modal-card label { color: var(--muted); font-size: 13px; }
+  .path-field { display: flex; align-items: center; gap: 8px; }
+  .path-field input { flex: 1; min-width: 0; }
   .modal-card input::placeholder { color: var(--muted); }
   .modal-card input:focus { border-color: rgba(169, 201, 255, .55); }
   .modal-hata { min-height: 18px; color: var(--danger); font-size: 13px; }
@@ -361,8 +385,15 @@ inline constexpr const char* kArayuzHtml = R"HTML(
 <body>
 <div class="ust-kenar" id="ustKenar"></div>
 <header class="titlebar" id="titlebar">
-  <div class="brand"><span class="logo"></span><span>Yerelkeşif</span></div>
+  <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#e8f3ff" stroke-width="2.5" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.2"/><path d="m15.1 15.1 4.6 4.6"/></svg></span><span>Yerelkeşif</span></div>
   <div class="wc">
+    <button class="download-toggle" id="indirmeKlasoruAc" title="İndirme klasörünü aç" aria-label="İndirme klasörünü aç">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 5.5h6l1.6 1.8h7.4v8.2H2.5z"/><path d="M10 9.5v4m-2-2 2 2 2-2" stroke-linecap="round"/></svg>
+      <span>İndirilenler</span>
+    </button>
+    <button class="settings-toggle" id="ayarlarAc" aria-label="Ayarlar" title="Ayarlar">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 6h14M3 14h14"/></svg>
+    </button>
     <button class="wc-btn" id="wcKucult" aria-label="Küçült" title="Küçült">
       <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10"/></svg>
     </button>
@@ -415,12 +446,15 @@ inline constexpr const char* kArayuzHtml = R"HTML(
       <div class="gonder">
         <div class="work">
           <div class="drop" id="drop" tabindex="0" role="button" aria-label="Dosya seç">
-            <div class="plus">+</div>
+            <div class="plus"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
             <div class="drop-title">Dosya sürükleyin</div>
             <div class="drop-sub">veya tıklayarak seçin</div>
           </div>
           <div class="files">
-            <button class="btn btn-block" id="dosyaEkle">+ Dosya Ekle</button>
+            <div class="file-actions">
+              <button class="btn" id="dosyaEkle">+ Dosya</button>
+              <button class="btn" id="klasorEkle">+ Klasör</button>
+            </div>
             <div class="file-list" id="fileList">
               <div class="empty" id="fileEmpty">
                 <strong>Henüz dosya seçilmedi</strong>
@@ -470,6 +504,25 @@ inline constexpr const char* kArayuzHtml = R"HTML(
   </form>
 </div>
 
+<div class="modal hidden" id="ayarlarModal" role="dialog" aria-modal="true" aria-labelledby="ayarlarBaslik">
+  <form class="modal-card" id="ayarlarForm" autocomplete="off">
+    <div class="eyebrow">Tercihler</div>
+    <h2 id="ayarlarBaslik">Ayarlar</h2>
+    <label for="kullaniciAdi">Kullanıcı adı</label>
+    <input id="kullaniciAdi" type="text" maxlength="64" autocomplete="off">
+    <label for="indirmeYolu">İndirilen dosyaların konumu</label>
+    <div class="path-field">
+      <input id="indirmeYolu" type="text" readonly>
+      <button type="button" class="btn btn-sm" id="yolSec">Gözat</button>
+    </div>
+    <div class="modal-hata" id="ayarlarHata"></div>
+    <div class="modal-foot">
+      <button type="button" class="btn btn-ghost btn-sm" id="ayarlarIptal">İptal</button>
+      <button type="submit" class="btn btn-filled btn-sm" id="ayarlarKaydet">Kaydet</button>
+    </div>
+  </form>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -479,7 +532,7 @@ inline constexpr const char* kArayuzHtml = R"HTML(
 const cpp = (ad, ...argumanlar) => window[ad](...argumanlar);
 const $ = id => document.getElementById(id);
 
-const state = { devices: [], selected: null, files: [], chats: {}, sending: false };
+const state = { devices: [], selected: null, files: [], chats: {}, sending: false, selectedActive: false };
 
 function fmtSize(b) {
   if (b == null) return "";
@@ -503,39 +556,50 @@ function renderDevices() {
   $("devEmpty").classList.toggle("hidden", state.devices.length > 0);
   state.devices.forEach(c => {
     const d = document.createElement("div");
-    d.className = "device" + (c.ip === state.selected ? " selected" : "");
+    d.className = "device" + (c.id === state.selected ? " selected" : "") + (c.active ? "" : " inactive");
     d.title = c.ip;
-    d.innerHTML = '<span class="ad"></span><span class="status">Aktif</span>';
+    d.innerHTML = '<span class="ad"></span><span class="status"></span>';
+    d.querySelector(".status").textContent = c.active ? "Aktif" : "Bağlantı kesildi";
     d.querySelector(".ad").textContent = c.ad;
-    d.onclick = () => selectDevice(c.ip);
+    d.onclick = () => selectDevice(c.id);
     box.appendChild(d);
   });
 }
 
 /* C++ bir cihaz bulduğunda ya da ad değiştiğinde çağırır */
-function cihazEkle(ip, ad) {
-  const mevcut = state.devices.find(x => x.ip === ip);
-  if (mevcut) mevcut.ad = ad; else state.devices.push({ ip, ad });
+function cihazEkle(id, ad, ip) {
+  const mevcut = state.devices.find(x => x.id === id);
+  if (mevcut) {
+    if (mevcut.ip !== ip) { mevcut.ip = ip; mevcut.active = false; if (state.selected === id) { state.selectedActive = false; guncelleDugmeler(); } }
+    mevcut.ad = ad;
+  } else state.devices.push({ id, ip, ad, active: false });
   renderDevices();
-  if (state.selected === ip) $("selTitle").textContent = ad;
+  if (state.selected === id) $("selTitle").textContent = ad;
+}
+
+function cihazDurumu(id, active) {
+  const device = state.devices.find(x => x.id === id);
+  if (device) device.active = active;
+  if (state.selected === id) {
+    state.selectedActive = active;
+    if (!active) { state.sending = false; hideProgress(); $("info").textContent = "Bağlantı kesildi"; }
+    guncelleDugmeler();
+  }
+  renderDevices();
 }
 
 /* C++ cihazın bağlantısının koptuğunu bildirdiğinde çağırır */
-function cihazKayboldu(ip) {
-  state.devices = state.devices.filter(x => x.ip !== ip);
-  renderDevices();
-  if (state.selected === ip) {
-    closeDevice();
-    toast("Cihazla bağlantı kesildi.");
-  }
+function cihazKayboldu(id) {
+  cihazDurumu(id, false);
 }
 
-function selectDevice(ip) {
+function selectDevice(id) {
   if (state.sending) { toast("Gönderim sürerken cihaz değiştirilemez."); return; }
-  const c = state.devices.find(x => x.ip === ip);
-  state.selected = ip;
+  const c = state.devices.find(x => x.id === id);
+  state.selected = id;
+  state.selectedActive = !!(c && c.active);
   state.files = [];
-  $("selTitle").textContent = c ? c.ad : ip;
+  $("selTitle").textContent = c ? c.ad : id;
   $("noSel").classList.add("hidden");
   $("sel").classList.remove("hidden");
   hideProgress();
@@ -546,6 +610,7 @@ function selectDevice(ip) {
 
 function closeDevice() {
   state.selected = null;
+  state.selectedActive = false;
   $("sel").classList.add("hidden");
   $("noSel").classList.remove("hidden");
   renderDevices();
@@ -566,6 +631,7 @@ $("ipIptal").onclick = ipModalKapat;
 $("modal").addEventListener("mousedown", e => { if (e.target === $("modal")) ipModalKapat(); });
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && !$("modal").classList.contains("hidden")) ipModalKapat();
+  if (e.key === "Escape" && !$("ayarlarModal").classList.contains("hidden")) ayarlarKapat();
 });
 $("ipForm").onsubmit = async e => {
   e.preventDefault();
@@ -574,6 +640,36 @@ $("ipForm").onsubmit = async e => {
   if (hata) { $("ipHata").textContent = hata; return; }
   ipModalKapat();
   toast(ip + " sorgulanıyor…");
+};
+
+async function ayarlarGoster() {
+  $("ayarlarHata").textContent = "";
+  const settings = await cpp("cppAyarlarGet");
+  $("kullaniciAdi").value = settings.username || "";
+  $("indirmeYolu").value = settings.downloadDirectory || "";
+  $("ayarlarModal").classList.remove("hidden");
+  $("kullaniciAdi").focus();
+}
+$("indirmeKlasoruAc").onclick = async () => {
+  if (!await cpp("cppIndirmeKlasoruAc")) toast("İndirme klasörü açılamadı");
+};
+function ayarlarKapat() { $("ayarlarModal").classList.add("hidden"); }
+$("ayarlarAc").onclick = ayarlarGoster;
+$("ayarlarIptal").onclick = ayarlarKapat;
+$("ayarlarModal").addEventListener("mousedown", e => { if (e.target === $("ayarlarModal")) ayarlarKapat(); });
+$("yolSec").onclick = async () => {
+  const path = await cpp("cppKlasorYolSec");
+  if (path) $("indirmeYolu").value = path;
+};
+$("ayarlarForm").onsubmit = async e => {
+  e.preventDefault();
+  const username = $("kullaniciAdi").value.trim();
+  const directory = $("indirmeYolu").value.trim();
+  if (!username || !directory) { $("ayarlarHata").textContent = "Kullanıcı adı ve klasör yolu boş bırakılamaz."; return; }
+  const saved = await cpp("cppAyarlarKaydet", username, directory);
+  if (!saved) { $("ayarlarHata").textContent = "Ayarlar kaydedilemedi. Klasör yolunu kontrol edin."; return; }
+  ayarlarKapat();
+  toast("Ayarlar kaydedildi");
 };
 
 $("kapat").onclick = () => {
@@ -590,9 +686,10 @@ function renderFiles() {
     const row = document.createElement("div");
     row.className = "file";
     row.title = f.path || f.name;
-    row.innerHTML = '<span class="name"></span><span class="size"></span>';
+    row.innerHTML = '<span class="name"></span><span class="size"></span><button class="remove" type="button" aria-label="Dosya seçimini kaldır" title="Dosyayı kaldır"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2 2l8 8M10 2L2 10"/></svg></button>';
     row.querySelector(".name").textContent = f.name;
     row.querySelector(".size").textContent = fmtSize(f.size);
+    row.querySelector(".remove").onclick = () => { if (!state.sending) { state.files = state.files.filter(x => x.path !== f.path); renderFiles(); } };
     list.appendChild(row);
   });
   if (!state.sending) $("info").textContent = state.files.length ? state.files.length + " dosya hazır" : "";
@@ -600,23 +697,39 @@ function renderFiles() {
 }
 
 function guncelleDugmeler() {
-  $("baslat").disabled = state.sending || !state.selected || state.files.length === 0;
-  $("dosyaEkle").disabled = state.sending;
+  const unavailable = !state.selectedActive;
+  $("baslat").disabled = state.sending || unavailable || !state.selected || state.files.length === 0;
+  $("dosyaEkle").disabled = state.sending || unavailable;
+  $("klasorEkle").disabled = state.sending || unavailable;
+  $("drop").setAttribute("aria-disabled", unavailable || state.sending ? "true" : "false");
+  $("drop").style.opacity = unavailable || state.sending ? ".45" : "";
+  $("drop").style.pointerEvents = unavailable || state.sending ? "none" : "";
+  $("mesajKutusu").disabled = unavailable;
+  $("gonder").disabled = unavailable;
 }
 
 function dosyaEkle(liste) {
-  if (!state.selected) return;
+  if (!state.selected || !state.selectedActive) return;
   liste.forEach(f => { if (!state.files.some(x => x.path === f.path)) state.files.push(f); });
   renderFiles();
 }
 
 async function dosyaSec() {
-  if (state.sending) return;
+  if (!state.selectedActive || state.sending) return;
   const secilen = await cpp("cppDosyaSec");
   if (Array.isArray(secilen)) dosyaEkle(secilen);
 }
+async function klasorSec() {
+  if (!state.selectedActive || state.sending) return;
+  const secilen = await cpp("cppKlasorSec");
+  if (Array.isArray(secilen)) {
+    if (secilen.length) toast("Klasörden " + secilen.length + " dosya eklendi");
+    dosyaEkle(secilen);
+  }
+}
 
 $("dosyaEkle").onclick = dosyaSec;
+$("klasorEkle").onclick = klasorSec;
 $("drop").onclick = dosyaSec;
 $("drop").onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); dosyaSec(); } };
 
@@ -630,12 +743,12 @@ function hideProgress() {
 }
 
 async function transferBaslat() {
-  if (!state.selected || state.sending || state.files.length === 0) return;
+  if (!state.selected || !state.selectedActive || state.sending || state.files.length === 0) return;
   state.sending = true;
   guncelleDugmeler();
   $("info").textContent = "Gönderim başlatılıyor…";
   showProgress(0);
-  await cpp("cppTransferBaslat", state.selected, ...state.files.map(f => f.path));
+  await cpp("cppTransferBaslat", state.selected, ...state.files.flatMap(f => [f.path, f.remoteName || f.name]));
 }
 $("baslat").onclick = transferBaslat;
 
@@ -646,8 +759,9 @@ window.transferDurumu = (ip, gelen, ad, yuzde, asama, sira, toplam, detay, sonMu
 
   if (asama === "ilerleme") {
     if (secili) {
+      if (!gelen) { state.sending = true; guncelleDugmeler(); }
       showProgress(yuzde);
-      $("info").textContent = (gelen ? "Alınıyor " : "Gönderiliyor ") + sira + "/" + toplam + ": " + ad + "  %" + Math.round(yuzde);
+      $("info").textContent = (gelen ? "Alınıyor " : "Gönderiliyor ") + sira + "/" + toplam + " · %" + Math.round(yuzde) + " · " + ad;
     }
     return;
   }
@@ -688,7 +802,7 @@ window.transferDurumu = (ip, gelen, ad, yuzde, asama, sira, toplam, detay, sonMu
 const drop = $("drop");
 ["dragenter", "dragover"].forEach(t => document.addEventListener(t, e => {
   e.preventDefault();
-  const kabul = !!state.selected && !state.sending;
+  const kabul = !!state.selected && state.selectedActive && !state.sending;
   if (e.dataTransfer) e.dataTransfer.dropEffect = kabul ? "copy" : "none";
   if (kabul) drop.classList.add("over");
 }));
@@ -696,7 +810,7 @@ document.addEventListener("dragleave", e => { if (!e.relatedTarget) drop.classLi
 document.addEventListener("drop", e => {
   e.preventDefault();
   drop.classList.remove("over");
-  if (!state.selected || state.sending || !e.dataTransfer || !e.dataTransfer.files.length) return;
+  if (!state.selected || !state.selectedActive || state.sending || !e.dataTransfer || !e.dataTransfer.files.length) return;
   const wv = window.chrome && window.chrome.webview;
   if (wv && wv.postMessageWithAdditionalObjects) {
     wv.postMessageWithAdditionalObjects('{"id":"__drop","method":"__dosyaBirak","params":[]}', [...e.dataTransfer.files]);
@@ -732,7 +846,7 @@ function mesajEkle(ip, yon, metin) {
 function mesajGonder() {
   const kutu = $("mesajKutusu");
   const metin = kutu.value.trim();
-  if (!metin || !state.selected) return;
+  if (!metin || !state.selected || !state.selectedActive) return;
   mesajEkle(state.selected, "giden", metin);
   kutu.value = "";
   cpp("cppMesajGonder", state.selected, metin);
@@ -745,7 +859,7 @@ $("mesajKutusu").onkeydown = e => {
 window.mesajAl = (ip, metin) => {
   mesajEkle(ip, "gelen", metin);
   if (ip !== state.selected) {
-    const c = state.devices.find(x => x.ip === ip);
+    const c = state.devices.find(x => x.id === ip);
     toast((c ? c.ad : ip) + ": " + metin.slice(0, 60));
   }
 };

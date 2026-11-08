@@ -1,6 +1,6 @@
 #include "FinderServer.h"
 
-#include "Logger.h"
+#include "common/Logger.h"
 #include "Protocol.h"
 
 namespace {
@@ -53,14 +53,23 @@ void FinderServer::handleDatagram(std::string_view text, const asio::ip::udp::en
     if (sender.address().is_loopback() || m_localIps.contains(ip)) return;
 
     if (text.starts_with(Protocol::kDiscoverPrefix)) {
+        auto payload = text.substr(Protocol::kDiscoverPrefix.size());
+        if (payload.starts_with(':')) payload.remove_prefix(1);
+        const auto separator = payload.rfind(':');
+        if (separator != std::string_view::npos && payload.substr(separator + 1) == m_finderClient.identity()) return;
         m_finderClient.Match(sender);
         return;
     }
 
     if (text.starts_with(Protocol::kMatchPrefix)) {
         // "P2P_MATCH_HELLO:<kullanıcı adı>"
-        auto name = text.substr(Protocol::kMatchPrefix.size());
-        if (name.starts_with(':')) name.remove_prefix(1);
-        m_events->onMatch(ip, name.empty() ? ip : std::string(name));
+        auto payload = text.substr(Protocol::kMatchPrefix.size());
+        if (payload.starts_with(':')) payload.remove_prefix(1);
+        const auto separator = payload.rfind(':');
+        const std::string name = separator == std::string_view::npos
+            ? (payload.empty() ? ip : std::string(payload)) : std::string(payload.substr(0, separator));
+        const std::string id = separator == std::string_view::npos
+            ? "legacy:" + ip : std::string(payload.substr(separator + 1));
+        if (id != m_finderClient.identity()) m_events->onMatch(ip, name, id);
     }
 }

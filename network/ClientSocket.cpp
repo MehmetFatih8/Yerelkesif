@@ -4,14 +4,15 @@
 #include <cstdint>
 #include <fstream>
 #include <string_view>
+#include <mstcpip.h>
 
-#include "Logger.h"
+#include "common/Logger.h"
 #include "Protocol.h"
-#include "Text.h"
+#include "common/Text.h"
 
 struct ClientSocket::OutgoingFile {
     std::filesystem::path path;
-    std::string name;                 // UTF-8 dosya adı
+    std::string name;                 // UTF-8 hedef göreli adı
     std::uint64_t size{0};
     std::uint64_t sent{0};
     std::size_t index{1};
@@ -42,12 +43,35 @@ void ClientSocket::connect(unsigned short mainPort, unsigned short filePort, std
         }
         if (--state->pending == 0) {
             m_connected = true;
+            for (auto* socket : {&m_main, &m_file}) {
+                std::error_code optionError;
+                socket->set_option(asio::socket_base::keep_alive(true), optionError);
+                tcp_keepalive keepalive{1, 3000, 1000};
+                DWORD returned = 0;
+                WSAIoctl(socket->native_handle(), SIO_KEEPALIVE_VALS, &keepalive, sizeof(keepalive),
+                         nullptr, 0, &returned, nullptr, nullptr);
+            }
+            monitorMain();
             onReady(true);
         }
     };
 
     m_main.async_connect(asio::ip::tcp::endpoint(address, mainPort), onOne);
     m_file.async_connect(asio::ip::tcp::endpoint(address, filePort), onOne);
+}
+
+void ClientSocket::monitorMain() {
+    m_main.async_read_some(asio::buffer(m_monitorBuffer),
+        [this, self = shared_from_this()](const std::error_code& ec, std::size_t) {
+            if (ec) {
+                if (m_connected) {
+                    m_events->onPeerClosed(m_ip);
+                    close();
+                }
+                return;
+            }
+            monitorMain();
+        });
 }
 
 void ClientSocket::close() {
@@ -99,13 +123,13 @@ void ClientSocket::writeNextMessage() {
         });
 }
 
-void ClientSocket::sendFiles(const std::vector<std::filesystem::path>& files) {
+void ClientSocket::sendFiles(const std::vector<FileToSend>& files) {
     if (files.empty()) return;
 
     if (!m_connected) {
         TransferInfo info;
         info.ip = m_ip;
-        info.fileName = Utf8FromWide(files.front().filename().native());
+        info.fileName = files.front().remoteName;
         info.stage = TransferInfo::Stage::Failed;
         info.total = files.size();
         info.batchEnd = true;
@@ -128,14 +152,14 @@ void ClientSocket::startNextFile() {
     m_files.pop_front();
 
     auto file = std::make_shared<OutgoingFile>();
-    file->path = item.path;
-    file->name = Utf8FromWide(item.path.filename().native());
+    file->path = item.file.path;
+    file->name = item.file.remoteName;
     file->index = item.index;
     file->total = item.total;
 
     std::error_code ec;
-    file->size = std::filesystem::file_size(item.path, ec);
-    file->in.open(item.path, std::ios::binary);
+    file->size = std::filesystem::file_size(item.file.path, ec);
+    file->in.open(item.file.path, std::ios::binary);
     if (ec || !file->in.is_open()) {
         LOG() << "ERR -> Dosya açılamadı: " << file->name;
         report(*file, TransferInfo::Stage::Failed, "Dosya açılamadı.");

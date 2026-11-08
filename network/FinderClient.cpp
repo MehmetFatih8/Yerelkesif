@@ -3,13 +3,16 @@
 #include <chrono>
 #include <cstdlib>
 #include <memory>
+#include <fstream>
+#include <filesystem>
+#include <algorithm>
+#include <windows.h>
+#include <objbase.h>
 #include <string_view>
 
-#include <windows.h>
-
-#include "Logger.h"
+#include "common/Logger.h"
 #include "Protocol.h"
-#include "Text.h"
+#include "common/Text.h"
 
 FinderClient::FinderClient(asio::io_context& io, unsigned short port)
     : m_socket(io), m_broadcast(asio::ip::address_v4::broadcast(), port), m_timer(io) {
@@ -20,12 +23,13 @@ FinderClient::FinderClient(asio::io_context& io, unsigned short port)
 }
 
 void FinderClient::start() {
-    m_username = getSystemUsername();
+    if (m_username.empty()) m_username = getSystemUsername();
+    m_identity = loadIdentity();
     Find();
 }
 
 void FinderClient::Find() {
-    send(std::string(Protocol::kDiscoverPrefix) + ":" + m_username, m_broadcast);
+    send(std::string(Protocol::kDiscoverPrefix) + ":" + m_username + ":" + m_identity, m_broadcast);
 
     m_timer.expires_after(std::chrono::seconds(3));
     m_timer.async_wait([this](const std::error_code& ec) {
@@ -36,7 +40,7 @@ void FinderClient::Find() {
 void FinderClient::Match(const asio::ip::udp::endpoint& requester) {
     // Yanıt her zaman keşif portuna gider; istekteki kaynak port geçici olabilir
     const asio::ip::udp::endpoint reply(requester.address(), m_broadcast.port());
-    send(std::string(Protocol::kMatchPrefix) + ":" + m_username, reply);
+    send(std::string(Protocol::kMatchPrefix) + ":" + m_username + ":" + m_identity, reply);
 }
 
 void FinderClient::Probe(const std::string& ip) {
@@ -47,8 +51,30 @@ void FinderClient::Probe(const std::string& ip) {
         LOG() << "ERR -> Geçersiz keşif adresi: " << ip;
         return;
     }
-    send(std::string(Protocol::kDiscoverPrefix) + ":" + m_username,
+    send(std::string(Protocol::kDiscoverPrefix) + ":" + m_username + ":" + m_identity,
          asio::ip::udp::endpoint(address, m_broadcast.port()));
+}
+
+std::string FinderClient::loadIdentity() {
+    const char* localAppData = std::getenv("LOCALAPPDATA");
+    std::filesystem::path file = localAppData && *localAppData
+        ? std::filesystem::path(localAppData) / L"Yerelkesif" / L"device-id.txt"
+        : std::filesystem::temp_directory_path() / L"Yerelkesif-device-id.txt";
+    std::error_code ec;
+    std::filesystem::create_directories(file.parent_path(), ec);
+    std::ifstream in(file, std::ios::binary);
+    std::string id;
+    if (in && std::getline(in, id) && !id.empty()) return id;
+
+    GUID guid{};
+    if (FAILED(CoCreateGuid(&guid))) return "device-" + std::to_string(GetTickCount64());
+    wchar_t value[39]{};
+    StringFromGUID2(guid, value, 39);
+    id = Utf8FromWide(std::wstring_view(value));
+    id.erase(std::remove_if(id.begin(), id.end(), [](char c) { return c == '{' || c == '}' || c == '-'; }), id.end());
+    std::ofstream out(file, std::ios::binary | std::ios::trunc);
+    if (out) out << id;
+    return id;
 }
 
 void FinderClient::send(const std::string& text, const asio::ip::udp::endpoint& to) {

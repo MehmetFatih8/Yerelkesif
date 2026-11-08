@@ -6,15 +6,23 @@
 #include <windows.h>
 #include <objbase.h>
 #include <shlobj.h>
+#include <mstcpip.h>
 
-#include "Logger.h"
+#include "common/Logger.h"
 #include "Protocol.h"
-#include "Text.h"
+#include "common/Text.h"
 
 namespace {
 
+std::filesystem::path g_downloadDirectory;
+
 // Alınan dosyalar Downloads\Yerelkesif altına yazılır
 std::filesystem::path ReceiveDirectory() {
+    if (!g_downloadDirectory.empty()) {
+        std::error_code ec;
+        std::filesystem::create_directories(g_downloadDirectory, ec);
+        return g_downloadDirectory;
+    }
     std::filesystem::path base = std::filesystem::temp_directory_path();
     PWSTR folder = nullptr;
     if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &folder))) {
@@ -28,10 +36,11 @@ std::filesystem::path ReceiveDirectory() {
     return dir;
 }
 
-// Karşı taraftan gelen ad yol bileşenlerini içerebilir; yalnızca dosya adı kullanılır
-std::filesystem::path SafeFileName(const std::string& utf8Name) {
-    auto name = PathFromUtf8(utf8Name).filename();
-    if (name.empty() || name == L"." || name == L"..") name = L"dosya";
+// Klasör aktarımında göreli alt yolları koru, kök dışına çıkan yolları reddet.
+std::filesystem::path SafeRelativePath(const std::string& utf8Name) {
+    auto name = PathFromUtf8(utf8Name).lexically_normal();
+    if (name.empty() || name.is_absolute() || name.has_root_name()) return L"dosya";
+    for (const auto& part : name) if (part == L"..") return L"dosya";
     return name;
 }
 
@@ -40,7 +49,8 @@ std::filesystem::path UniquePath(const std::filesystem::path& dir, const std::fi
     std::filesystem::path target = dir / name;
     std::error_code ec;
     for (int i = 1; std::filesystem::exists(target, ec); ++i) {
-        target = dir / (name.stem().native() + L" (" + std::to_wstring(i) + L")" + name.extension().native());
+        target = dir / name.parent_path() /
+                 (name.stem().native() + L" (" + std::to_wstring(i) + L")" + name.extension().native());
     }
     return target;
 }
@@ -54,6 +64,10 @@ bool ParseNumber(std::string_view digits, std::uint64_t& value) {
 
 }  // namespace
 
+void PeerConnection::setDownloadDirectory(std::filesystem::path path) {
+    g_downloadDirectory = std::move(path);
+}
+
 PeerConnection::PeerConnection(asio::io_context& io, NetEventsPtr events, std::string ip)
     : m_events(std::move(events)),
       m_ip(std::move(ip)),
@@ -63,6 +77,14 @@ PeerConnection::PeerConnection(asio::io_context& io, NetEventsPtr events, std::s
       m_fileChunk(Protocol::kChunkSize) {}
 
 void PeerConnection::startListening() {
+    for (auto* socket : {&m_main, &m_file}) {
+        std::error_code optionError;
+        socket->set_option(asio::socket_base::keep_alive(true), optionError);
+        tcp_keepalive keepalive{1, 3000, 1000};
+        DWORD returned = 0;
+        WSAIoctl(socket->native_handle(), SIO_KEEPALIVE_VALS, &keepalive, sizeof(keepalive),
+                 nullptr, 0, &returned, nullptr, nullptr);
+    }
     readMain();
     readFile();
 }
@@ -179,12 +201,14 @@ void PeerConnection::parseFile() {
 }
 
 void PeerConnection::beginReceive(const std::string& utf8Name, std::uint64_t size) {
-    const auto name = SafeFileName(utf8Name);
+    const auto name = SafeRelativePath(utf8Name);
     m_outPath = UniquePath(ReceiveDirectory(), name);
     m_outName = Utf8FromWide(name.native());
     m_expected = size;
     m_received = 0;
 
+    std::error_code directoryError;
+    std::filesystem::create_directories(m_outPath.parent_path(), directoryError);
     m_out.open(m_outPath, std::ios::binary);
     if (!m_out.is_open()) {
         LOG() << "ERR -> Dosya oluşturulamadı: " << Utf8FromWide(m_outPath.native());

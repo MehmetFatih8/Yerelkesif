@@ -10,6 +10,8 @@
 
 // Windows dosya seçme penceresi (çoklu seçim). Sonuç [{"name","size","path"}] JSON dizisidir; iptalde "[]".
 std::string PickFilesJson(HWND owner);
+std::string PickFolderFilesJson(HWND owner);
+std::string PickFolderPath(HWND owner);
 
 // Tam yol listesini [{"name","size","path"}] JSON dizisine çevirir.
 std::string FilesJson(const std::vector<std::wstring>& paths);

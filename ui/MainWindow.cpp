@@ -4,6 +4,8 @@
 
 #include <dwmapi.h>
 
+#include "../resource.h"
+
 namespace {
 
 constexpr wchar_t kClassName[] = L"YerelKesifPencere";
@@ -28,10 +30,35 @@ void FitChild(HWND hwnd) {
                  SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
-// Büyütülmüşken çerçeve olmaz (kenarda beyaz çizgi kalmasın)
-void ApplyShadow(HWND hwnd) {
-    const MARGINS shadow = IsZoomed(hwnd) ? MARGINS{0, 0, 0, 0} : MARGINS{0, 0, 1, 1};
-    DwmExtendFrameIntoClientArea(hwnd, &shadow);
+// Özel pencere bölgesi köşeleri zaten yuvarlar. DWM'e yalnızca sağ/alt kenarda
+// bir piksellik çerçeve uzatmak bu köşelerde gri bir kama oluşturuyordu.
+void ApplyCornerStyle(HWND hwnd) {
+    const MARGINS noExtendedFrame{0, 0, 0, 0};
+    DwmExtendFrameIntoClientArea(hwnd, &noExtendedFrame);
+
+    // Windows 11 normally rounds framed windows automatically; this window owns its full
+    // client area, so request the same rounded clipping explicitly for the WebView surface.
+    constexpr DWORD dwmaWindowCornerPreference = 33;  // DWMWA_WINDOW_CORNER_PREFERENCE
+    constexpr DWORD dwmWindowCornerRound = 2;         // DWMWCP_ROUND
+    DwmSetWindowAttribute(hwnd, dwmaWindowCornerPreference, &dwmWindowCornerRound,
+                          sizeof(dwmWindowCornerRound));
+}
+
+// DWM köşe tercihi bazı Windows yapılandırmalarında özel istemci alanına uygulanmıyor.
+// Pencere bölgesi WebView dahil tüm yüzeyi keserek aynı yuvarlaklığı her sistemde korur.
+void ApplyWindowShape(HWND hwnd) {
+    if (IsZoomed(hwnd)) {
+        SetWindowRgn(hwnd, nullptr, TRUE);
+        return;
+    }
+
+    RECT bounds{};
+    if (!GetWindowRect(hwnd, &bounds)) return;
+    const int dpi = static_cast<int>(GetDpiForWindow(hwnd));
+    const int radius = MulDiv(24, dpi, 96);
+    HRGN region = CreateRoundRectRgn(0, 0, bounds.right - bounds.left + 1,
+                                     bounds.bottom - bounds.top + 1, radius * 2, radius * 2);
+    if (region && !SetWindowRgn(hwnd, region, TRUE)) DeleteObject(region);
 }
 
 // Windows 11'in aktif pencere etrafına çizdiği beyaz vurgu çizgisini kapatır
@@ -110,7 +137,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
     }
 
     case WM_SIZE:
-        ApplyShadow(hwnd);
+        ApplyCornerStyle(hwnd);
+        ApplyWindowShape(hwnd);
         FitChild(hwnd);
         if (self && self->onMaximizeChanged && (wp == SIZE_MAXIMIZED || wp == SIZE_RESTORED)) {
             self->onMaximizeChanged(wp == SIZE_MAXIMIZED);
@@ -132,6 +160,10 @@ MainWindow::MainWindow(HINSTANCE instance) {
     wc.cbSize = sizeof(wc);
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = instance;
+    wc.hIcon = static_cast<HICON>(LoadImageW(instance, MAKEINTRESOURCEW(IDI_YERELKESIF), IMAGE_ICON,
+                                             GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), LR_SHARED));
+    wc.hIconSm = static_cast<HICON>(LoadImageW(instance, MAKEINTRESOURCEW(IDI_YERELKESIF), IMAGE_ICON,
+                                               GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED));
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = CreateSolidBrush(RGB(12, 16, 24));   // Arayüzün zemin rengiyle aynı
     wc.lpszClassName = kClassName;
@@ -151,8 +183,12 @@ MainWindow::MainWindow(HINSTANCE instance) {
                              x, y, width, height, nullptr, nullptr, instance, this);
     if (!m_hwnd) throw std::runtime_error("Pencere oluşturulamadı.");
 
+    if (wc.hIcon) SendMessageW(m_hwnd, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(wc.hIcon));
+    if (wc.hIconSm) SendMessageW(m_hwnd, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(wc.hIconSm));
+
     RemoveBorderColor(m_hwnd);
-    ApplyShadow(m_hwnd);
+    ApplyCornerStyle(m_hwnd);
+    ApplyWindowShape(m_hwnd);
 }
 
 MainWindow::~MainWindow() {

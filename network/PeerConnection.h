@@ -23,6 +23,7 @@ public:
     void setMainSocket(asio::ip::tcp::socket&& socket) { m_main = std::move(socket); }
     void setFileSocket(asio::ip::tcp::socket&& socket) { m_file = std::move(socket); }
     bool isReady() const { return m_main.is_open() && m_file.is_open(); }
+    static void setDownloadDirectory(std::filesystem::path path);
 
     void startListening();
 

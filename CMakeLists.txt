@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Yerelkesif CXX)
+project(Yerelkesif CXX RC)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,16 +28,23 @@ FetchContent_MakeAvailable(webview asio)
 # WIN32: konsol penceresi açılmaz
 add_executable(Yerelkesif WIN32
         main.cpp
+        settings/AppSettings.cpp
         AppController.cpp
-        ClientSocket.cpp
-        FinderClient.cpp
-        FinderServer.cpp
-        PeerConnection.cpp
-        ServerSocket.cpp
-        Text.cpp
+        network/ClientSocket.cpp
+        network/FinderClient.cpp
+        network/FinderServer.cpp
+        network/PeerConnection.cpp
+        network/ServerSocket.cpp
+        common/Text.cpp
         ui/MainWindow.cpp
         ui/NativeFiles.cpp
-        ui/UiBridge.cpp)
+        ui/UiBridge.cpp
+        app_resources.rc)
+
+# MinGW windres, .rc içindeki ICON dosyasını her zaman Ninja bağımlılığına yazmıyor.
+# İkon değişince RC nesnesi yeniden derlensin ve yeni ikon EXE'ye gerçekten gömülsün.
+set_source_files_properties(app_resources.rc PROPERTIES
+        OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Yerelkesif.ico")
 
 target_include_directories(Yerelkesif PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
@@ -63,12 +70,26 @@ target_link_libraries(Yerelkesif PRIVATE
         shlwapi
         comdlg32
         dwmapi
+        advapi32
         gdi32
         user32)
 
 # MinGW: çalışma zamanı DLL'leri olmadan da açılsın
 if(MINGW)
     target_link_options(Yerelkesif PRIVATE
-            -static-libgcc -static-libstdc++
-            -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,-Bdynamic,--no-whole-archive)
+            -static -static-libgcc -static-libstdc++)
+
+    # Link the static archive explicitly. A bare `winpthread` can resolve to
+    # MinGW's DLL import library, leaving libwinpthread-1.dll as a runtime
+    # dependency even when the rest of the C++ runtime is linked statically.
+    execute_process(
+            COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libwinpthread.a
+            OUTPUT_VARIABLE WINPTHREAD_STATIC_LIBRARY
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            RESULT_VARIABLE WINPTHREAD_LOOKUP_RESULT)
+    if(WINPTHREAD_LOOKUP_RESULT EQUAL 0 AND EXISTS "${WINPTHREAD_STATIC_LIBRARY}")
+        target_link_libraries(Yerelkesif PRIVATE "${WINPTHREAD_STATIC_LIBRARY}")
+    else()
+        message(FATAL_ERROR "MinGW static libwinpthread.a was not found")
+    endif()
 endif()

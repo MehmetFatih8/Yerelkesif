@@ -9,7 +9,7 @@
 struct TransferInfo {
     enum class Stage { Progress, Done, Failed };
 
-    std::string ip;
+    std::string ip; // Bu transferin başlatıldığı IP; arayüz köprüsü cihaz kimliğine çevirir
     std::string fileName;             // UTF-8
     bool incoming{false};
     double percent{0.0};
@@ -22,7 +22,7 @@ struct TransferInfo {
 
 // Ağ katmanının (io thread) denetleyiciye bildirdiği olaylar.
 struct NetEvents {
-    std::function<void(const std::string& ip, const std::string& name)> onMatch;
+    std::function<void(const std::string& ip, const std::string& name, const std::string& id)> onMatch;
     std::function<void(const std::string& ip, const std::string& text)> onMessage;
     std::function<void(const std::string& ip)> onPeerClosed;
     std::function<void(const TransferInfo& info)> onTransfer;

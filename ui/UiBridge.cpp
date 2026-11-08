@@ -2,22 +2,23 @@
 
 #include <exception>
 #include <filesystem>
+#include <shellapi.h>
 
-#include "../Logger.h"
-#include "../Text.h"
+#include "../common/Logger.h"
+#include "../common/Text.h"
 #include "ArayuzHtml.h"
 
 namespace {
 
 constexpr wchar_t kTitle[] = L"Yerelkeşif";
 
-// Arayüzden gelen "[ip, yol1, yol2, ...]" dizisinin elemanlarını dosya yollarına çevirir
-std::vector<std::filesystem::path> ToPaths(const std::vector<std::string>& values, std::size_t from) {
-    std::vector<std::filesystem::path> paths;
-    for (std::size_t i = from; i < values.size(); ++i) {
-        paths.push_back(PathFromUtf8(values[i]));
+// [cihaz kimliği, yol1, uzakAd1, ...] verisini aktarım kayıtlarına çevirir
+std::vector<FileToSend> ToTransferFiles(const std::vector<std::string>& values, std::size_t from) {
+    std::vector<FileToSend> files;
+    for (std::size_t i = from; i + 1 < values.size(); i += 2) {
+        files.push_back({PathFromUtf8(values[i]), values[i + 1]});
     }
-    return paths;
+    return files;
 }
 
 }  // namespace
@@ -122,6 +123,28 @@ void UiBridge::bindFunctions() {
     m_web.bind("cppDosyaSec", [this](std::string) -> std::string {
         return PickFilesJson(m_window.handle());
     });
+    m_web.bind("cppKlasorSec", [this](std::string) -> std::string {
+        return PickFolderFilesJson(m_window.handle());
+    });
+    m_web.bind("cppKlasorYolSec", [this](std::string) -> std::string {
+        return PickFolderPath(m_window.handle());
+    });
+    m_web.bind("cppAyarlarGet", [this](std::string) -> std::string {
+        const auto settings = m_app.settings();
+        return "{\"username\":" + JsonQuote(settings.username) +
+               ",\"downloadDirectory\":" + JsonQuote(Utf8FromWide(settings.downloadDirectory.native())) + "}";
+    });
+    m_web.bind("cppIndirmeKlasoruAc", [this](std::string) -> std::string {
+        const auto settings = m_app.settings();
+        const auto result = ShellExecuteW(m_window.handle(), L"open",
+                                          settings.downloadDirectory.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        return reinterpret_cast<INT_PTR>(result) > 32 ? "true" : "false";
+    });
+    m_web.bind("cppAyarlarKaydet", [this](std::string req) -> std::string {
+        const auto args = ParseJsonStringArray(req);
+        if (args.size() < 2) return "false";
+        return m_app.saveSettings({args[0], PathFromUtf8(args[1])}) ? "true" : "false";
+    });
 
     // Manuel IP ekleme: hata metni ya da null döner
     m_web.bind("cppIpEkle", [this](std::string req) -> std::string {
@@ -140,10 +163,10 @@ void UiBridge::bindFunctions() {
         return "null";
     });
 
-    // args: [ip, yol1, yol2, ...]
+    // args: [cihaz kimliği, yol1, uzakAd1, ...]
     m_web.bind("cppTransferBaslat", [this](std::string req) -> std::string {
         const auto args = ParseJsonStringArray(req);
-        if (args.size() >= 2) m_app.sendFiles(args[0], ToPaths(args, 1));
+        if (args.size() >= 3) m_app.sendFiles(args[0], ToTransferFiles(args, 1));
         return "null";
     });
 }
@@ -152,11 +175,14 @@ void UiBridge::bindFunctions() {
 void UiBridge::bindEvents() {
     UiEvents events;
 
-    events.onDeviceFound = [this](const std::string& ip, const std::string& name) {
-        post("window.cihazEkle(" + JsonQuote(ip) + "," + JsonQuote(name) + ")");
+    events.onDeviceFound = [this](const std::string& id, const std::string& name, const std::string& ip) {
+        post("window.cihazEkle(" + JsonQuote(id) + "," + JsonQuote(name) + "," + JsonQuote(ip) + ")");
     };
     events.onDeviceLost = [this](const std::string& ip) {
         post("window.cihazKayboldu(" + JsonQuote(ip) + ")");
+    };
+    events.onDeviceStatus = [this](const std::string& ip, bool active) {
+        post("window.cihazDurumu(" + JsonQuote(ip) + "," + (active ? "true" : "false") + ")");
     };
     events.onMessage = [this](const std::string& ip, const std::string& text) {
         post("window.mesajAl(" + JsonQuote(ip) + "," + JsonQuote(text) + ")");
