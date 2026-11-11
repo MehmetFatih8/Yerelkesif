@@ -1,6 +1,8 @@
 #include "ClientSocket.h"
 
+#include <algorithm>
 #include <array>
+#include <charconv>
 #include <cstdint>
 #include <fstream>
 #include <string_view>
@@ -62,7 +64,7 @@ void ClientSocket::connect(unsigned short mainPort, unsigned short filePort, std
 
 void ClientSocket::monitorMain() {
     m_main.async_read_some(asio::buffer(m_monitorBuffer),
-        [this, self = shared_from_this()](const std::error_code& ec, std::size_t) {
+        [this, self = shared_from_this()](const std::error_code& ec, std::size_t bytes) {
             if (ec) {
                 if (m_connected) {
                     m_events->onPeerClosed(m_ip);
@@ -70,8 +72,43 @@ void ClientSocket::monitorMain() {
                 }
                 return;
             }
+            m_monitorMessages.append(m_monitorBuffer.data(), bytes);
+            parseMonitorMessages();
             monitorMain();
         });
+}
+
+void ClientSocket::parseMonitorMessages() {
+    constexpr std::string_view prefix = Protocol::kMsgPrefix;
+    while (!m_monitorMessages.empty()) {
+        const std::string_view buffered(m_monitorMessages);
+        if (!prefix.starts_with(buffered.substr(0, std::min(buffered.size(), prefix.size())))) {
+            m_events->onNotice(m_ip, "Karşı taraftan geçersiz mesaj çerçevesi alındı.");
+            m_monitorMessages.clear();
+            return;
+        }
+        if (buffered.size() < prefix.size()) return;
+        const auto colon = buffered.find(':', prefix.size());
+        if (colon == std::string_view::npos) {
+            if (buffered.size() > Protocol::kMaxHeaderSize) m_monitorMessages.clear();
+            return;
+        }
+
+        std::uint64_t length = 0;
+        const auto digits = buffered.substr(prefix.size(), colon - prefix.size());
+        const auto parsed = std::from_chars(digits.data(), digits.data() + digits.size(), length);
+        if (digits.empty() || parsed.ec != std::errc{} || parsed.ptr != digits.data() + digits.size() ||
+            length > Protocol::kMaxMessageSize) {
+            m_events->onNotice(m_ip, "Karşı taraftan geçersiz mesaj uzunluğu alındı.");
+            m_monitorMessages.clear();
+            return;
+        }
+
+        const auto frameSize = colon + 1 + static_cast<std::size_t>(length);
+        if (buffered.size() < frameSize) return;
+        m_events->onMessage(m_ip, std::string(buffered.substr(colon + 1, static_cast<std::size_t>(length))));
+        m_monitorMessages.erase(0, frameSize);
+    }
 }
 
 void ClientSocket::close() {

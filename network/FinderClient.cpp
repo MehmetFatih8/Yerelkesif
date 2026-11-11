@@ -31,7 +31,7 @@ void FinderClient::start() {
 void FinderClient::Find() {
     send(std::string(Protocol::kDiscoverPrefix) + ":" + m_username + ":" + m_identity, m_broadcast);
 
-    m_timer.expires_after(std::chrono::seconds(3));
+    m_timer.expires_after(std::chrono::milliseconds(500));
     m_timer.async_wait([this](const std::error_code& ec) {
         if (!ec) Find();
     });

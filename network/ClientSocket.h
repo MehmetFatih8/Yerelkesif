@@ -46,6 +46,7 @@ private:
 
     void writeNextMessage();
     void monitorMain();
+    void parseMonitorMessages();
     void startNextFile();
     void sendRequest(const std::shared_ptr<OutgoingFile>& file);
     void waitForAck(const std::shared_ptr<OutgoingFile>& file);
@@ -59,6 +60,7 @@ private:
     asio::ip::tcp::socket m_main;
     asio::ip::tcp::socket m_file;
     std::array<char, 256> m_monitorBuffer{};
+    std::string m_monitorMessages;
     bool m_connected{false};
     std::deque<std::shared_ptr<const std::string>> m_messages;   // Sıradaki ilk öğe yazılmakta olan paket
     std::deque<PendingFile> m_files;

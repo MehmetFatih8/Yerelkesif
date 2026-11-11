@@ -7,3 +7,10 @@ cmake-build-release/
 *.exe
 *.obj
 *.o
+
+# Android / Gradle outputs
+.gradle/
+**/build/
+**/local.properties
+*.apk
+*.aab

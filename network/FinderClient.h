@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-// UDP keşif yayını (3 saniyede bir) ve keşif isteklerine verilen eşleşme yanıtları.
+// UDP keşif yayını (yarım saniyede bir) ve keşif isteklerine verilen eşleşme yanıtları.
 class FinderClient {
 public:
     FinderClient(asio::io_context& io, unsigned short port);

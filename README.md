@@ -1,15 +1,29 @@
 # Yerelkeşif
 
-A program that discovers devices on your local network and lets you chat and transfer files with them. It uses asynchronous Asio networking and a WebView2 interface with a custom frameless title bar.
+A cross-platform local network app for discovering nearby devices, chatting and transferring files. The Windows version uses asynchronous Asio networking with a WebView2 interface and a custom frameless title bar. The Android version uses the same web interface with a native Java networking service. Windows and Android devices can discover and communicate with each other on the same LAN.
 
 ## Usage
 
-- Devices on the same LAN appear in the left panel automatically. Use **+ IP Ekle** to probe a specific address.
+- Devices on the same LAN appear automatically. Use **+ IP Ekle** to probe a specific address.
 - Select a device to open its panel. Drag files onto the drop zone or use **+ Dosya** and **+ Klasör** to add files. Folder selection includes nested files and preserves their relative paths.
 - Select **Transferi Başlat** to send the queued files. Type in the chat box; Enter sends, while Shift+Enter adds a new line.
-- Open the menu at the top right to change your username and download folder. Received files are saved to `Downloads\Yerelkesif` by default.
+- On Android, use **+ Dosya** or **+ Klasör** to select content. Folder transfers retain the selected folder name and nested paths. Android can also receive files from the system share menu; choose Yerelkeşif, then select a device to send.
+- Open the menu at the top right to change your username and download folder. Windows saves received files to `Downloads\Yerelkesif` by default; Android uses the `Downloads` folder.
 - A persistent device ID distinguishes devices that use the same username. When a device's IP changes, it remains the same peer in the device list.
 - Logs are written to `%TEMP%\!Yerelkesif_Logs`.
+
+## Android
+
+The Android app supports device discovery, chat, file transfers and folder transfers with the Windows app. It uses UDP discovery on port 8888, TCP chat on port 9999 and TCP file transfers on port 9998. The Android interface adapts to status and navigation bars, and its foreground network service closes peer connections when the app task is removed.
+
+To build a debug APK, install JDK 17 or newer and Android SDK Platform 37, then accept the Android SDK licenses:
+
+```sh
+cd android-app
+./gradlew assembleDebug
+```
+
+On Windows, use `gradlew.bat assembleDebug`. The APK is written to `android-app/app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Project layout
 
@@ -28,6 +42,10 @@ A program that discovers devices on your local network and lets you chat and tra
 | `ui/NativeFiles.*` | Native file/folder pickers and drag-and-drop handler |
 | `ui/ArayuzHtml.h` | Front-end HTML, CSS and JavaScript |
 | `app_resources.rc`, `Yerelkesif.ico`, `resource.h` | Executable icon and Windows version metadata |
+| `android-app/app/src/main/java/.../MainActivity.java` | Android activity, share intents, file pickers and WebView bridge |
+| `android-app/app/src/main/java/.../PeerService.java` | Android UDP discovery and TCP chat/file-transfer service |
+| `android-app/app/src/main/assets/index.html` | Android front-end, shared interaction model and responsive layout |
+| `android-app/app/src/main/res/` | Android launcher icons and app resources |
 
 ## Wire protocol
 
